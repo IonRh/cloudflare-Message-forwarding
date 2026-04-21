@@ -9,7 +9,7 @@
 
 ## 功能概览
 
-- 统一 `POST` 入参
+- 支持 `POST(JSON)` 与 `GET(query)` 两种调用方式
 - 按 `type` 分发到不同渠道
 - 标题和正文统一模板拼接
 - 错误统一返回 JSON
@@ -44,11 +44,14 @@ wrangler init cloudflare-message-forwarding
 
 说明：
 - webhook 类型通常直接在请求体 `extra.url` 传入。
-- 企业微信也可在请求体 `extra.webhook_url` 传入，会优先于环境变量。
+- 企业微信 webhook 仅从环境变量 `WECOM_WEBHOOK_URL` 读取。
 
 ### 3. 调用统一接口
 
-只支持 `POST` 请求，且请求体必须是 JSON。
+支持 `POST` 与 `GET` 请求：
+
+- `POST`：请求体为 JSON
+- `GET`：通过 query 参数传参
 
 通用字段：
 
@@ -56,6 +59,13 @@ wrangler init cloudflare-message-forwarding
 - `content`：消息正文（必填）
 - `title`：消息标题（选填）
 - `extra`：各平台扩展参数（选填）
+
+GET 扩展参数（便捷写法）：
+
+- `url`：等价于 `extra.url`
+- `chat_id`：等价于 `extra.chat_id`
+- `msgtype`：等价于 `extra.msgtype`
+- `extra`：JSON 字符串，作为 `extra` 对象（可与上述参数混用）
 
 ## 请求示例
 
@@ -75,6 +85,12 @@ wrangler init cloudflare-message-forwarding
 说明：
 - `chat_id` 可不传，不传时使用 `TG_CHAT_ID`。
 
+GET 示例：
+
+```text
+GET /?type=telegram&title=告警&content=服务异常&chat_id=123456789
+```
+
 ### 通用 Webhook
 
 ```json
@@ -88,6 +104,12 @@ wrangler init cloudflare-message-forwarding
 }
 ```
 
+GET 示例：
+
+```text
+GET /?type=webhook&title=通知&content=发布成功&url=https%3A%2F%2Fexample.com%2Fwebhook
+```
+
 ### 企业微信机器人（WeCom）
 
 ```json
@@ -96,19 +118,23 @@ wrangler init cloudflare-message-forwarding
   "title": "告警",
   "content": "CPU 使用率过高",
   "extra": {
-    "webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx",
     "msgtype": "text"
   }
 }
+```
+
+GET 示例：
+
+```text
+GET /?type=wecom&title=告警&content=CPU使用率过高&msgtype=text
 ```
 
 兼容别名：
 - `type` 也可以使用 `wechat_work`
 
 企业微信扩展参数：
-- `extra.webhook_url`：机器人地址（优先）
-- `extra.url`：机器人地址（兼容字段）
 - `extra.msgtype`：`text` 或 `markdown`，默认 `text`
+- 机器人地址固定使用环境变量 `WECOM_WEBHOOK_URL`
 
 ## 返回格式
 
@@ -132,7 +158,7 @@ wrangler init cloudflare-message-forwarding
 
 常见状态码：
 - `400`：参数错误、JSON 非法、类型不支持
-- `405`：请求方法不是 POST
+- `405`：请求方法不是 POST/GET
 - `500`：下游平台调用失败
 
 ## 标题模板规则

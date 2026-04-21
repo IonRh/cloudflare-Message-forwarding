@@ -1,14 +1,48 @@
 export default {
   async fetch(request, env) {
-    if (request.method !== "POST") {
+    if (request.method !== "POST" && request.method !== "GET") {
       return new Response("Method Not Allowed", { status: 405 });
     }
 
     let data;
-    try {
-      data = await request.json();
-    } catch {
-      return new Response("Invalid JSON", { status: 400 });
+    if (request.method === "POST") {
+      try {
+        data = await request.json();
+      } catch {
+        return new Response("Invalid JSON", { status: 400 });
+      }
+    } else {
+      const url = new URL(request.url);
+      const type = url.searchParams.get("type");
+      const title = url.searchParams.get("title") || undefined;
+      const content = url.searchParams.get("content");
+      const extraParam = url.searchParams.get("extra");
+      let extra = {};
+
+      if (extraParam) {
+        try {
+          extra = JSON.parse(extraParam);
+        } catch {
+          return new Response("Invalid extra JSON in query", { status: 400 });
+        }
+      }
+
+      // Support common shortcut query params for each channel.
+      const webhookUrl = url.searchParams.get("url");
+      const chatId = url.searchParams.get("chat_id");
+      const msgtype = url.searchParams.get("msgtype");
+
+      if (webhookUrl && !extra.url) {
+        extra.url = webhookUrl;
+      }
+      if (chatId && !extra.chat_id) {
+        extra.chat_id = chatId;
+      }
+      if (msgtype && !extra.msgtype) {
+        extra.msgtype = msgtype;
+      }
+
+      data = { type, title, content, extra };
     }
 
     const { type, title, content, extra = {} } = data;
@@ -97,9 +131,9 @@ async function sendWebhook(url, title, content) {
 }
 
 async function sendWecom(env, title, content, extra) {
-  const webhookUrl = extra.webhook_url || extra.url || env.WECOM_WEBHOOK_URL;
+  const webhookUrl = env.WECOM_WEBHOOK_URL;
   if (!webhookUrl) {
-    throw new Error("Missing WeCom webhook url");
+    throw new Error("Missing env WECOM_WEBHOOK_URL");
   }
 
   const msgtype = extra.msgtype === "markdown" ? "markdown" : "text";
