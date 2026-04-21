@@ -46,8 +46,10 @@ export default {
     }
 
     const { type, title, content, extra = {} } = data;
+    const normalizedTitle = normalizeInputText(title);
+    const normalizedContent = normalizeInputText(content);
 
-    if (!type || !content) {
+    if (!type || !normalizedContent) {
       return new Response("Missing params", { status: 400 });
     }
 
@@ -56,16 +58,16 @@ export default {
 
       switch (type) {
         case "telegram":
-          result = await sendTelegram(env, title, content, extra);
+          result = await sendTelegram(env, normalizedTitle, normalizedContent, extra);
           break;
 
         case "webhook":
-          result = await sendWebhook(extra.url, title, content);
+          result = await sendWebhook(extra.url, normalizedTitle, normalizedContent);
           break;
 
         case "wecom":
         case "wechat_work":
-          result = await sendWecom(env, title, content, extra);
+          result = await sendWecom(env, normalizedTitle, normalizedContent, extra);
           break;
 
         default:
@@ -172,4 +174,16 @@ function formatText(title, content) {
     return `*${title}*\n${content}`;
   }
   return content;
+}
+
+function normalizeInputText(text) {
+  if (typeof text !== "string") {
+    return text;
+  }
+
+  return text
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
+    .replace(/\\t/g, "\t");
 }

@@ -166,6 +166,11 @@ GET /?type=wecom&title=告警&content=CPU使用率过高&msgtype=text
 - 有 `title` 时，发送内容格式：`*title*\ncontent`
 - 无 `title` 时，仅发送 `content`
 
+## 文本转义与兼容
+
+- 会自动把字面量转义字符转换为真实字符：`\\n`、`\\r\\n`、`\\r`、`\\t`
+- 该规则对 `POST` 和 `GET` 都生效
+
 ## 注意事项
 
 - Telegram 当前使用 `parse_mode: Markdown`，标题中的特殊字符可能需要转义。
